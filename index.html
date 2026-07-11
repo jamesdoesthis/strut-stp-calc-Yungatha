@@ -227,6 +227,103 @@
 
 <body>
 
+<!-- ===== ACCESS GATE (Project AiT / Yungatha licensing layer) ===== -->
+<style>
+  #aitGate{
+    position:fixed; inset:0; z-index:9999;
+    background:var(--charcoal);
+    display:flex; align-items:center; justify-content:center;
+    padding:20px;
+  }
+  #aitGate .gateCard{
+    width:100%; max-width:380px;
+    background:linear-gradient(180deg,#23292e,#1c2124);
+    border:1px solid #3a4147;
+    border-top:3px solid var(--orange);
+    border-radius:10px;
+    padding:32px 28px;
+    text-align:center;
+    box-shadow:0 20px 60px rgba(0,0,0,.5);
+  }
+  #aitGate .gateLock{
+    width:44px; height:44px; margin:0 auto 16px;
+    border-radius:50%;
+    background:rgba(255,107,26,.1);
+    display:flex; align-items:center; justify-content:center;
+  }
+  #aitGate .gateLock svg{ width:20px; height:20px; stroke:var(--orange); fill:none; stroke-width:2; }
+  #aitGate h2{
+    margin:0 0 6px; font-size:1.05rem; letter-spacing:.02em;
+    color:#fff; font-family:'Inter',sans-serif;
+  }
+  #aitGate p{
+    margin:0 0 20px; font-size:.8rem; color:var(--steel);
+  }
+  #aitGate input{
+    width:100%; box-sizing:border-box;
+    background:#111417; border:1px solid #3a4147; border-radius:6px;
+    color:#fff; font-family:'JetBrains Mono',monospace; font-size:.95rem;
+    padding:11px 14px; text-align:center; letter-spacing:.08em;
+    margin-bottom:12px;
+  }
+  #aitGate input:focus{ outline:none; border-color:var(--orange); }
+  #aitGate button{
+    width:100%; background:var(--orange); color:#1c2124; border:none;
+    border-radius:6px; padding:11px 14px; font-weight:700; font-size:.85rem;
+    font-family:'Inter',sans-serif; cursor:pointer; letter-spacing:.02em;
+  }
+  #aitGate button:hover{ background:#ff7a2e; }
+  #aitGate .gateError{
+    margin-top:12px; font-size:.78rem; color:var(--red);
+    min-height:1em;
+  }
+  #aitGate .gateFooter{
+    margin-top:22px; font-size:.68rem; color:var(--steel);
+    border-top:1px dashed #3a4147; padding-top:14px;
+  }
+  #appContent{ display:none; }
+</style>
+
+<div id="aitGate">
+  <div class="gateCard">
+    <div class="gateLock">
+      <svg viewBox="0 0 24 24"><rect x="4" y="11" width="16" height="9" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+    </div>
+    <h2>Yungatha &mdash; Strut &amp; Streetplates Gaming</h2>
+    <p>Licensed tool. Enter your access code to continue.</p>
+    <input type="password" id="aitGateInput" placeholder="Access code" autocomplete="off" />
+    <button onclick="aitCheckCode()">Unlock</button>
+    <div class="gateError" id="aitGateError"></div>
+    <div class="gateFooter">&copy; JSTZN / Yungatha Pty Ltd &mdash; unauthorised distribution prohibited</div>
+  </div>
+</div>
+
+<script>
+  const AIT_ACCESS_CODE = "YUNGATHA2026";
+  function aitCheckCode(){
+    const val = document.getElementById('aitGateInput').value.trim();
+    if(val === AIT_ACCESS_CODE){
+      sessionStorage.setItem('aitUnlocked','1');
+      document.getElementById('aitGate').style.display='none';
+      document.getElementById('appContent').style.display='block';
+    } else {
+      document.getElementById('aitGateError').textContent = 'Incorrect code. Please try again.';
+    }
+  }
+  document.getElementById('aitGateInput').addEventListener('keydown', function(e){
+    if(e.key === 'Enter'){ aitCheckCode(); }
+  });
+  if(sessionStorage.getItem('aitUnlocked') === '1'){
+    document.getElementById('aitGate').style.display='none';
+    document.addEventListener('DOMContentLoaded', function(){
+      document.getElementById('appContent').style.display='block';
+    });
+  }
+</script>
+<!-- ===== END ACCESS GATE ===== -->
+
+<div id="appContent">
+
 <div class="print-only" id="printHeader">
   <div class="print-letterhead">
     <div class="print-company">Yungatha Strut &amp; Streetplates Gaming</div>
@@ -1279,5 +1376,8 @@ document.getElementById('printInfoModal').addEventListener('click', e=>{
 });
 
 </script>
+
+</div><!-- /#appContent -->
+
 </body>
 </html>
