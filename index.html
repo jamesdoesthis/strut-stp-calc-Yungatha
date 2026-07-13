@@ -184,6 +184,7 @@
   .order-note b{color:var(--orange-dark);}
 
   .print-only{display:none;}
+  .print-svg-only{display:none;}
 
   @media print{
     body{background:#fff;-webkit-print-color-adjust:exact;print-color-adjust:exact;}
@@ -192,10 +193,10 @@
     .print-letterhead{text-align:center;border-bottom:2px solid var(--line);padding-bottom:6px;margin-bottom:12px;}
     .print-company{font-family:'Oswald',sans-serif;font-size:14px;text-transform:uppercase;letter-spacing:1px;color:var(--text-mute);}
     .print-sub{font-family:'JetBrains Mono',monospace;font-size:10.5px;color:var(--text-mute);margin-top:2px;}
-    .print-job-banner{background:var(--charcoal);color:#fff;border-radius:8px;padding:14px 22px;border-left:8px solid var(--orange);}
-    .pjb-line{display:flex;align-items:baseline;gap:16px;margin:5px 0;}
+    .print-job-banner{background:var(--charcoal);color:#fff;border-radius:8px;padding:6px 22px;border-left:8px solid var(--orange);}
+    .pjb-line{display:flex;align-items:baseline;gap:16px;margin:0;line-height:1;}
     .pjb-label{font-family:'Oswald',sans-serif;font-size:15px;text-transform:uppercase;letter-spacing:2px;color:var(--orange);font-weight:700;min-width:100px;flex-shrink:0;}
-    .pjb-value{font-family:'Oswald',sans-serif;font-size:40px;font-weight:800;letter-spacing:0.3px;line-height:1.1;}
+    .pjb-value{font-family:'Oswald',sans-serif;font-size:40px;font-weight:800;letter-spacing:0.3px;line-height:1;}
     main{padding:0;max-width:100%;}
     .panel{border-radius:0;box-shadow:none;margin-bottom:6px;border-color:#999;}
     .panel-head{padding:6px 10px;page-break-after:avoid;break-after:avoid;}
@@ -205,124 +206,39 @@
     /* Streetplates: full page width, one per row. Busy bars with several
        small labeled pieces need all the width they can get for the street
        names to stay legible — worth a few extra pages. */
-    .bar-grid{display:grid;grid-template-columns:1fr!important;gap:10px!important;}
-    .bar-card{page-break-inside:avoid;break-inside:avoid;border-radius:0;margin:0;}
+    /* Plain block flow instead of CSS Grid for print specifically — grid
+       fragmentation across page breaks tends to bump a whole card to the
+       next page even when there was room for something, leaving a big
+       blank gap behind it. Block flow lets the browser pack pages far more
+       tightly. Visually identical here since it's already a single column
+       either way. */
+    .bar-grid{display:block!important;}
+    .bar-card{border-radius:0;margin:0 0 10px;}
+    .cc-head{page-break-after:avoid;break-after:avoid;}
+    .cc-body{page-break-inside:avoid;break-inside:avoid;}
     .cc-head{padding:5px 10px;font-size:12.5px;}
     .cc-body{padding:6px;}
     .legend-note{display:none!important;}
     .multiplier-badge{font-size:12px;padding:4px 10px;top:5px;right:5px;}
+    .print-svg-only{display:block!important;}
 
     /* Struts: only the dimension number matters (no names to fit), so pack
-       these small and dense — several per row — to keep the strut section
-       of the printout down to as few pages as possible. */
-    .bundled-type .bar-grid{grid-template-columns:repeat(4,1fr)!important;gap:5px!important;}
-    .bundled-type .cc-head{padding:3px 6px;font-size:9.5px;}
+       these dense — one bundle per row, full width — to keep the strut
+       section down to as few pages as possible while the number itself
+       stays big and easy to read. The print version of each diagram is a
+       genuinely different, shorter drawing (not the tall on-screen one
+       squashed down), so the numbers render crisp instead of stretched. */
+    .bundled-type .bar-card{margin:0 0 6px;}
+    .bundled-type .cc-head{padding:3px 10px;font-size:12px;}
     .bundled-type .cc-head span:last-child{display:none;}
     .bundled-type .cc-body{padding:3px;}
-    .bundled-type .multiplier-badge{font-size:8.5px;padding:2px 5px;top:2px;right:2px;}
-    .bundled-type .cut-summary,.bundled-type .steps-list{font-size:11px;margin-bottom:8px;}
+    .bundled-type .multiplier-badge{font-size:12px;padding:3px 9px;top:4px;right:4px;}
+    .bundled-type .cut-summary,.bundled-type .steps-list{font-size:12px;margin-bottom:8px;}
   }
 </style>
 </head>
 
 <body>
-
-<!-- ===== ACCESS GATE (Project AiT / Yungatha licensing layer) ===== -->
-<style>
-  #aitGate{
-    position:fixed; inset:0; z-index:9999;
-    background:var(--charcoal);
-    display:flex; align-items:center; justify-content:center;
-    padding:20px;
-  }
-  #aitGate .gateCard{
-    width:100%; max-width:380px;
-    background:linear-gradient(180deg,#23292e,#1c2124);
-    border:1px solid #3a4147;
-    border-top:3px solid var(--orange);
-    border-radius:10px;
-    padding:32px 28px;
-    text-align:center;
-    box-shadow:0 20px 60px rgba(0,0,0,.5);
-  }
-  #aitGate .gateLock{
-    width:44px; height:44px; margin:0 auto 16px;
-    border-radius:50%;
-    background:rgba(255,107,26,.1);
-    display:flex; align-items:center; justify-content:center;
-  }
-  #aitGate .gateLock svg{ width:20px; height:20px; stroke:var(--orange); fill:none; stroke-width:2; }
-  #aitGate h2{
-    margin:0 0 6px; font-size:1.05rem; letter-spacing:.02em;
-    color:#fff; font-family:'Inter',sans-serif;
-  }
-  #aitGate p{
-    margin:0 0 20px; font-size:.8rem; color:var(--steel);
-  }
-  #aitGate input{
-    width:100%; box-sizing:border-box;
-    background:#111417; border:1px solid #3a4147; border-radius:6px;
-    color:#fff; font-family:'JetBrains Mono',monospace; font-size:.95rem;
-    padding:11px 14px; text-align:center; letter-spacing:.08em;
-    margin-bottom:12px;
-  }
-  #aitGate input:focus{ outline:none; border-color:var(--orange); }
-  #aitGate button{
-    width:100%; background:var(--orange); color:#1c2124; border:none;
-    border-radius:6px; padding:11px 14px; font-weight:700; font-size:.85rem;
-    font-family:'Inter',sans-serif; cursor:pointer; letter-spacing:.02em;
-  }
-  #aitGate button:hover{ background:#ff7a2e; }
-  #aitGate .gateError{
-    margin-top:12px; font-size:.78rem; color:var(--red);
-    min-height:1em;
-  }
-  #aitGate .gateFooter{
-    margin-top:22px; font-size:.68rem; color:var(--steel);
-    border-top:1px dashed #3a4147; padding-top:14px;
-  }
-  #appContent{ display:none; }
-</style>
-
-<div id="aitGate">
-  <div class="gateCard">
-    <div class="gateLock">
-      <svg viewBox="0 0 24 24"><rect x="4" y="11" width="16" height="9" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
-    </div>
-    <h2>Yungatha &mdash; Strut &amp; Streetplates Gaming</h2>
-    <p>Licensed tool. Enter your access code to continue.</p>
-    <input type="password" id="aitGateInput" placeholder="Access code" autocomplete="off" />
-    <button onclick="aitCheckCode()">Unlock</button>
-    <div class="gateError" id="aitGateError"></div>
-    <div class="gateFooter">&copy; JSTZN / Yungatha Pty Ltd &mdash; unauthorised distribution prohibited</div>
-  </div>
-</div>
-
-<script>
-  const AIT_ACCESS_CODE = "YUNGATHA2026";
-  function aitCheckCode(){
-    const val = document.getElementById('aitGateInput').value.trim();
-    if(val === AIT_ACCESS_CODE){
-      sessionStorage.setItem('aitUnlocked','1');
-      document.getElementById('aitGate').style.display='none';
-      document.getElementById('appContent').style.display='block';
-    } else {
-      document.getElementById('aitGateError').textContent = 'Incorrect code. Please try again.';
-    }
-  }
-  document.getElementById('aitGateInput').addEventListener('keydown', function(e){
-    if(e.key === 'Enter'){ aitCheckCode(); }
-  });
-  if(sessionStorage.getItem('aitUnlocked') === '1'){
-    document.getElementById('aitGate').style.display='none';
-    document.addEventListener('DOMContentLoaded', function(){
-      document.getElementById('appContent').style.display='block';
-    });
-  }
-</script>
-<!-- ===== END ACCESS GATE ===== -->
-
-<div id="appContent">
 
 <div class="print-only" id="printHeader">
   <div class="print-letterhead">
@@ -1121,8 +1037,9 @@ function runCalculation(){
 
 const VB_W = 1000, VB_H = 170;
 
-function svgWrap(inner){
-  return `<svg width="100%" viewBox="0 0 ${VB_W} ${VB_H}" style="background:#F0F2F3;border:1px solid var(--line);border-radius:6px;display:block;">${inner}</svg>`;
+function svgWrap(inner, H){
+  H = H || VB_H;
+  return `<svg width="100%" viewBox="0 0 ${VB_W} ${H}" style="background:#F0F2F3;border:1px solid var(--line);border-radius:6px;display:block;">${inner}</svg>`;
 }
 function wasteHatch(x,y,w,h){
   if(w<1||h<1) return '';
@@ -1173,7 +1090,8 @@ function fitText(text, maxWidth, maxFont, minFont, charWidthFactor){
   return {text, fontSize};
 }
 
-function buildBarSVGInner(pieces, stockLen, kerf, minOffcut, colorMap){
+function buildBarSVGInner(pieces, stockLen, kerf, minOffcut, colorMap, H){
+  H = H || VB_H;
   const scale = VB_W/stockLen;
   let inner = '';
   let cursorMM = 0;
@@ -1181,7 +1099,7 @@ function buildBarSVGInner(pieces, stockLen, kerf, minOffcut, colorMap){
     const x = cursorMM*scale;
     const w = p.length*scale;
     const fill = colorMap[p.length] || '#7FB3D5';
-    inner += `<rect x="${x.toFixed(1)}" y="0" width="${w.toFixed(1)}" height="${VB_H}" fill="${fill}" stroke="#1F2428" stroke-width="2.5"/>`;
+    inner += `<rect x="${x.toFixed(1)}" y="0" width="${w.toFixed(1)}" height="${H}" fill="${fill}" stroke="#1F2428" stroke-width="2.5"/>`;
 
     const hasLabel = !!p.jobLabel;
     if(hasLabel){
@@ -1190,18 +1108,18 @@ function buildBarSVGInner(pieces, stockLen, kerf, minOffcut, colorMap){
       const showCount = p.labelTotal>1;
       const labelFit = fitText(shortLabel, availWidth, 26, 13, 0.56);
       const dimFit = fitText(p.length+'mm', availWidth, showCount?30:34, 15, 0.62);
-      const labelY = showCount ? VB_H/2-10 : VB_H/2+2;
-      const dimY = showCount ? VB_H/2+24 : VB_H/2+38;
+      const labelY = showCount ? H/2-10 : H/2+2;
+      const dimY = showCount ? H/2+24 : H/2+38;
       inner += `<text x="${(x+w/2).toFixed(1)}" y="${labelY}" text-anchor="middle" font-family="Oswald, sans-serif" font-size="${labelFit.fontSize.toFixed(0)}" fill="#1F2428" font-weight="700">${escapeXML(labelFit.text)}</text>`;
       inner += `<text x="${(x+w/2).toFixed(1)}" y="${dimY}" text-anchor="middle" font-family="JetBrains Mono, monospace" font-size="${dimFit.fontSize.toFixed(0)}" fill="#1F2428" font-weight="700">${dimFit.text}</text>`;
       if(showCount){
         const countText = `${p.labelIndex}/${p.labelTotal}`;
         const countFit = fitText(countText, availWidth, 22, 12, 0.58);
-        inner += `<text x="${(x+w/2).toFixed(1)}" y="${VB_H/2+56}" text-anchor="middle" font-family="JetBrains Mono, monospace" font-size="${countFit.fontSize.toFixed(0)}" fill="#E0570F" font-weight="700">${escapeXML(countFit.text)}</text>`;
+        inner += `<text x="${(x+w/2).toFixed(1)}" y="${H/2+56}" text-anchor="middle" font-family="JetBrains Mono, monospace" font-size="${countFit.fontSize.toFixed(0)}" fill="#E0570F" font-weight="700">${escapeXML(countFit.text)}</text>`;
       }
     } else {
-      const fontSize = Math.min(58, Math.max(30, w*0.32));
-      inner += `<text x="${(x+w/2).toFixed(1)}" y="${VB_H/2+8}" text-anchor="middle" font-family="Oswald, sans-serif" font-size="${fontSize.toFixed(0)}" fill="#1F2428" font-weight="700">${p.length}</text>`;
+      const fontSize = Math.min(H*0.62, Math.max(H*0.32, w*0.32));
+      inner += `<text x="${(x+w/2).toFixed(1)}" y="${H/2+fontSize*0.32}" text-anchor="middle" font-family="Oswald, sans-serif" font-size="${fontSize.toFixed(0)}" fill="#1F2428" font-weight="700">${p.length}</text>`;
     }
 
     // Position badge — which cut number this is, in order along the bar.
@@ -1209,9 +1127,9 @@ function buildBarSVGInner(pieces, stockLen, kerf, minOffcut, colorMap){
     // edge, clear of the label/dimension text stacked below it.
     if(w > 70){
       const bx = hasLabel ? (x+w/2) : (x+32);
-      const by = hasLabel ? 20 : 32;
-      const br = hasLabel ? 17 : 26;
-      const bFont = hasLabel ? 19 : 28;
+      const by = hasLabel ? 20 : Math.min(32, H*0.28);
+      const br = hasLabel ? 17 : Math.min(26, H*0.24);
+      const bFont = hasLabel ? 19 : Math.min(28, H*0.26);
       inner += `<circle cx="${bx.toFixed(1)}" cy="${by}" r="${br}" fill="#1F2428" stroke="#fff" stroke-width="2.5"/>`;
       inner += `<text x="${bx.toFixed(1)}" y="${by+(bFont*0.32)}" text-anchor="middle" font-family="JetBrains Mono, monospace" font-weight="700" font-size="${bFont}" fill="#fff">${idx+1}</text>`;
     }
@@ -1219,7 +1137,7 @@ function buildBarSVGInner(pieces, stockLen, kerf, minOffcut, colorMap){
     cursorMM += p.length;
     if(kerf>0){
       const kx = cursorMM*scale;
-      inner += `<line x1="${kx.toFixed(1)}" y1="0" x2="${kx.toFixed(1)}" y2="${VB_H}" stroke="#1F2428" stroke-width="3" stroke-dasharray="7,5"/>`;
+      inner += `<line x1="${kx.toFixed(1)}" y1="0" x2="${kx.toFixed(1)}" y2="${H}" stroke="#1F2428" stroke-width="3" stroke-dasharray="7,5"/>`;
     }
     cursorMM += kerf;
   });
@@ -1228,16 +1146,16 @@ function buildBarSVGInner(pieces, stockLen, kerf, minOffcut, colorMap){
   const rx = cursorMM*scale, rw = remainderMM*scale;
   if(remainderMM > 0.5){
     if(remainderMM >= minOffcut){
-      inner += `<rect x="${rx.toFixed(1)}" y="0" width="${rw.toFixed(1)}" height="${VB_H}" fill="#BFE3CC" stroke="#1F2428" stroke-width="2.5"/>`;
-      const fs = Math.min(40, Math.max(18, rw*0.15));
-      inner += `<text x="${(rx+rw/2).toFixed(1)}" y="${VB_H/2+8}" text-anchor="middle" font-family="Oswald, sans-serif" font-weight="700" font-size="${fs.toFixed(0)}" fill="#1F5C36">${Math.round(remainderMM)} - OFFCUT</text>`;
+      inner += `<rect x="${rx.toFixed(1)}" y="0" width="${rw.toFixed(1)}" height="${H}" fill="#BFE3CC" stroke="#1F2428" stroke-width="2.5"/>`;
+      const fs = Math.min(H*0.24, Math.max(H*0.11, rw*0.15));
+      inner += `<text x="${(rx+rw/2).toFixed(1)}" y="${H/2+fs*0.32}" text-anchor="middle" font-family="Oswald, sans-serif" font-weight="700" font-size="${fs.toFixed(0)}" fill="#1F5C36">${Math.round(remainderMM)} - OFFCUT</text>`;
     } else {
-      inner += wasteHatch(rx,0,rw,VB_H);
-      const fs = Math.min(26, Math.max(14, rw*0.22));
-      inner += `<text x="${(rx+rw/2).toFixed(1)}" y="${VB_H/2+6}" text-anchor="middle" font-family="JetBrains Mono, monospace" font-weight="700" font-size="${fs.toFixed(0)}" fill="#C4432B">${Math.round(remainderMM)}</text>`;
+      inner += wasteHatch(rx,0,rw,H);
+      const fs = Math.min(H*0.16, Math.max(H*0.08, rw*0.22));
+      inner += `<text x="${(rx+rw/2).toFixed(1)}" y="${H/2+fs*0.28}" text-anchor="middle" font-family="JetBrains Mono, monospace" font-weight="700" font-size="${fs.toFixed(0)}" fill="#C4432B">${Math.round(remainderMM)}</text>`;
     }
   }
-  return {inner, remainder: remainderMM};
+  return {inner, remainder: remainderMM, H};
 }
 
 // Groups consecutive bars that share the exact same cut pattern into single
@@ -1291,6 +1209,9 @@ function buildBarGroups(bars, barsFromStock, bundleSize, bundled){
   return groups;
 }
 
+const PRINT_STRUT_VB_H = 85;
+const PRINT_STREETPLATE_VB_H = 128;
+
 function buildGroupCard(g, stockLen, kerf, minOffcut, colorMap, bundleSize){
   const {inner} = buildBarSVGInner(g.bar.pieces, stockLen, kerf, minOffcut, colorMap);
   const pieceList = g.bar.pieces.map(p=>p.jobLabel ? `${p.jobLabel} (${p.length}mm)` : `${p.length}mm`).join(' + ');
@@ -1312,14 +1233,22 @@ function buildGroupCard(g, stockLen, kerf, minOffcut, colorMap, bundleSize){
     title += ` — ${labelsInGroup[0]}`;
   }
 
+  // Every card gets its own dedicated, correctly-proportioned print version
+  // — struts very compact (only the number matters), Streetplates only
+  // modestly shorter than on-screen (names still need the room) — rather
+  // than reusing the tall on-screen one, which is what was leaving big
+  // gaps when a card didn't quite fit at the bottom of a page.
+  const printH = g.bundled ? PRINT_STRUT_VB_H : PRINT_STREETPLATE_VB_H;
+  const printSvg = svgWrap(buildBarSVGInner(g.bar.pieces, stockLen, kerf, minOffcut, colorMap, printH).inner, printH);
+
   const card = document.createElement('div');
   card.className = 'bar-card';
+  const badgeHTML = g.count>1 ? `<div class="multiplier-badge">&times;${g.count} identical</div>` : '';
+  const bodyHTML = `<div class="cc-body no-print" style="position:relative;">${badgeHTML}${svgWrap(inner)}</div>
+       <div class="cc-body print-svg-only" style="position:relative;">${badgeHTML}${printSvg}</div>`;
   card.innerHTML = `
     <div class="cc-head"><span>${title}</span><span>${sourceTag}</span></div>
-    <div class="cc-body" style="position:relative;">
-      ${g.count>1 ? `<div class="multiplier-badge">&times;${g.count} identical</div>` : ''}
-      ${svgWrap(inner)}
-    </div>
+    ${bodyHTML}
     <div class="legend-note">${g.count>1 ? `All ${g.count} pieces are cut the same way` : 'This piece is cut'} — the numbered circle${g.bar.pieces.length!==1?'s':''} on the diagram show${g.bar.pieces.length===1?'s':''} the cut order — ${g.bar.pieces.length} cut${g.bar.pieces.length!==1?'s':''} from each ${stockLen}mm length: <b>${pieceList}</b></div>
   `;
   return card;
@@ -1376,8 +1305,5 @@ document.getElementById('printInfoModal').addEventListener('click', e=>{
 });
 
 </script>
-
-</div><!-- /#appContent -->
-
 </body>
 </html>
