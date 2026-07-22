@@ -835,13 +835,97 @@ function getBundleConfig(){
 function getKerf(){ return document.getElementById('kerfEnabled').checked ? (parseFloat(document.getElementById('kerf').value)||0) : 0; }
 function getMinOffcut(){ return parseFloat(document.getElementById('minOffcut').value)||0; }
 
-// ---------------- BIN PACKING (Best-Fit-Decreasing, 1D) ----------------
+// ---------------- BIN PACKING (per-bar exact subset-sum fill) ----------------
+// Instead of spreading pieces evenly across bars (classic Best-Fit, which
+// leaves every bar with some leftover), this fills ONE bar as close to
+// completely full as possible — searching every combination of remaining
+// pieces, not just "biggest piece first" — then moves on to the next bar
+// with whatever's left. That concentrates the unavoidable waste into as few
+// bars as possible instead of a little bit of slack on every bar, which is
+// how an experienced cutter plans it by hand (and catches swaps like
+// "drop one long piece, use two shorter ones instead" that a pure greedy
+// pass would miss).
 function packBars(pieces, stockLen, kerf){
+  const capacity = Math.floor(stockLen + 1e-6);
+  // Guard against pathological inputs (huge stock lengths or very large
+  // piece counts) where the exact search would be too heavy for the
+  // browser — fall back to a fast best-fit pass in that case.
+  if(capacity > 200000 || pieces.length > 600){
+    return packBarsBestFit(pieces, stockLen, kerf);
+  }
+
+  let remaining = [...pieces].sort((a,b)=> b.length - a.length);
+  const bars = [];
+  const blocked = [];
+
+  remaining = remaining.filter(p=>{
+    if(p.length + kerf > stockLen + 1e-9){ blocked.push(p); return false; }
+    return true;
+  });
+
+  while(remaining.length){
+    const chosenIdx = bestFillForBar(remaining, capacity, kerf); // indices, sorted descending
+    const barPieces = [];
+    let used = 0;
+    chosenIdx.forEach(idx=>{
+      const p = remaining[idx];
+      barPieces.push(p);
+      used += p.length + kerf;
+    });
+    chosenIdx.forEach(idx=> remaining.splice(idx,1));
+    barPieces.sort((a,b)=> b.length - a.length);
+    bars.push({pieces: barPieces, used});
+  }
+
+  bars.forEach(b=> b.remainder = Math.max(0, stockLen - b.used));
+  return {bars, blocked};
+}
+
+// Finds the combination of items (by index) that fills one bar as close to
+// `capacity` as possible, via an exact 0/1 subset-sum search (dynamic
+// programming over achievable lengths in mm). Workshop cut lists are small
+// enough — tens to a few hundred pieces — that this runs instantly.
+function bestFillForBar(items, capacity, kerf){
+  const n = items.length;
+  const reachable = new Uint8Array(capacity+1);
+  const itemUsedAt = new Int32Array(capacity+1).fill(-1);
+  const prevAt = new Int32Array(capacity+1).fill(-1);
+  reachable[0] = 1;
+
+  for(let i=0;i<n;i++){
+    const cost = Math.round(items[i].length + kerf);
+    if(cost > capacity || cost <= 0) continue;
+    for(let s=capacity; s>=cost; s--){
+      if(!reachable[s] && reachable[s-cost]){
+        reachable[s] = 1;
+        itemUsedAt[s] = i;
+        prevAt[s] = s - cost;
+      }
+    }
+  }
+
+  let best = 0;
+  for(let s=capacity; s>=0; s--){ if(reachable[s]){ best = s; break; } }
+
+  const chosen = [];
+  let s = best;
+  while(s > 0 && itemUsedAt[s] !== -1){
+    chosen.push(itemUsedAt[s]);
+    s = prevAt[s];
+  }
+  chosen.sort((a,b)=> b-a); // descending so splice-removal by index is safe
+  return chosen;
+}
+
+// Fallback used only for very large jobs — the original Best-Fit-Decreasing
+// pass. Faster but spreads leftover material more evenly across bars rather
+// than concentrating it, so it's a last resort rather than the default.
+function packBarsBestFit(pieces, stockLen, kerf){
   const sorted = [...pieces].sort((a,b)=> b.length - a.length);
   const bars = [];
   const blocked = [];
   sorted.forEach(p=>{
-    const cost = p.length + kerf; // one kerf cut consumed per piece separated from the bar
+    const cost = p.length + kerf;
     if(cost > stockLen + 1e-9){ blocked.push(p); return; }
     let bestBar = null, bestRemain = Infinity;
     for(const bar of bars){
