@@ -1309,6 +1309,11 @@ function buildBarSVGInner(pieces, stockLen, kerf, minOffcut, colorMap, H){
   const scale = VB_W/stockLen;
   let inner = '';
   let cursorMM = 0;
+  // Running list of physical cut positions (mm from the left/reference end
+  // of the stock), used to draw the cumulative measurement strip below the
+  // bar. Starts with the 0 reference point itself.
+  const cutPoints = [{mm:0, isRef:true}];
+
   pieces.forEach((p, idx)=>{
     const x = cursorMM*scale;
     const w = p.length*scale;
@@ -1316,39 +1321,59 @@ function buildBarSVGInner(pieces, stockLen, kerf, minOffcut, colorMap, H){
     inner += `<rect x="${x.toFixed(1)}" y="0" width="${w.toFixed(1)}" height="${H}" fill="${fill}" stroke="#1F2428" stroke-width="2.5"/>`;
 
     const hasLabel = !!p.jobLabel;
+
+    // Badge geometry is worked out up front so the piece number/label below
+    // can be sized and positioned to clear it — previously a narrow piece
+    // (e.g. a lone "700") could land its number directly under the badge
+    // circle, blacking out the leading digit.
+    const showBadge = w > 70;
+    const bx = hasLabel ? (x+w/2) : (x+32);
+    const by = hasLabel ? 20 : Math.min(32, H*0.28);
+    const br = hasLabel ? 17 : Math.min(26, H*0.24);
+    const bFont = hasLabel ? 19 : Math.min(28, H*0.26);
+    const badgeBottom = by + br;
+
     if(hasLabel){
       const availWidth = w*0.9;
       const shortLabel = abbreviateStreetName(p.jobLabel);
       const showCount = p.labelTotal>1;
       const labelFit = fitText(shortLabel, availWidth, 26, 13, 0.56);
       const dimFit = fitText(p.length+'mm', availWidth, showCount?30:34, 15, 0.62);
-      const labelY = showCount ? H/2-10 : H/2+2;
-      const dimY = showCount ? H/2+24 : H/2+38;
+      const labelY = Math.max(showCount ? H/2-10 : H/2+2, showBadge ? badgeBottom+labelFit.fontSize*0.8 : 0);
+      const dimY = labelY + (showCount ? 34 : 36);
       inner += `<text x="${(x+w/2).toFixed(1)}" y="${labelY}" text-anchor="middle" font-family="Oswald, sans-serif" font-size="${labelFit.fontSize.toFixed(0)}" fill="#1F2428" font-weight="700">${escapeXML(labelFit.text)}</text>`;
       inner += `<text x="${(x+w/2).toFixed(1)}" y="${dimY}" text-anchor="middle" font-family="JetBrains Mono, monospace" font-size="${dimFit.fontSize.toFixed(0)}" fill="#1F2428" font-weight="700">${dimFit.text}</text>`;
       if(showCount){
         const countText = `${p.labelIndex}/${p.labelTotal}`;
         const countFit = fitText(countText, availWidth, 22, 12, 0.58);
-        inner += `<text x="${(x+w/2).toFixed(1)}" y="${H/2+56}" text-anchor="middle" font-family="JetBrains Mono, monospace" font-size="${countFit.fontSize.toFixed(0)}" fill="#E0570F" font-weight="700">${escapeXML(countFit.text)}</text>`;
+        inner += `<text x="${(x+w/2).toFixed(1)}" y="${dimY+32}" text-anchor="middle" font-family="JetBrains Mono, monospace" font-size="${countFit.fontSize.toFixed(0)}" fill="#E0570F" font-weight="700">${escapeXML(countFit.text)}</text>`;
       }
     } else {
-      const fontSize = Math.min(H*0.62, Math.max(H*0.32, w*0.32));
-      inner += `<text x="${(x+w/2).toFixed(1)}" y="${H/2+fontSize*0.32}" text-anchor="middle" font-family="Oswald, sans-serif" font-size="${fontSize.toFixed(0)}" fill="#1F2428" font-weight="700">${p.length}</text>`;
+      // Plain number: cap the font size to whatever vertical room is left
+      // below the badge, and push the baseline down to clear it. This is
+      // what stops the badge circle covering part of the number on narrow
+      // pieces.
+      let fontSize = Math.min(H*0.62, Math.max(H*0.32, w*0.32));
+      if(showBadge){
+        const availBelowBadge = H - badgeBottom - 4;
+        fontSize = Math.min(fontSize, Math.max(11, availBelowBadge/0.85));
+      }
+      let textY = H/2 + fontSize*0.32;
+      if(showBadge) textY = Math.max(textY, badgeBottom + fontSize*0.82);
+      textY = Math.min(textY, H-3);
+      inner += `<text x="${(x+w/2).toFixed(1)}" y="${textY.toFixed(1)}" text-anchor="middle" font-family="Oswald, sans-serif" font-size="${fontSize.toFixed(0)}" fill="#1F2428" font-weight="700">${p.length}</text>`;
     }
 
-    // Position badge — which cut number this is, in order along the bar.
-    // For labeled (Streetplate) pieces it sits centered along the very top
-    // edge, clear of the label/dimension text stacked below it.
-    if(w > 70){
-      const bx = hasLabel ? (x+w/2) : (x+32);
-      const by = hasLabel ? 20 : Math.min(32, H*0.28);
-      const br = hasLabel ? 17 : Math.min(26, H*0.24);
-      const bFont = hasLabel ? 19 : Math.min(28, H*0.26);
+    // Badge — which cut number this is, in order along the bar. Drawn last
+    // so it always sits crisply on top of the piece colour; the text above
+    // is now sized/placed so it never sits underneath it.
+    if(showBadge){
       inner += `<circle cx="${bx.toFixed(1)}" cy="${by}" r="${br}" fill="#1F2428" stroke="#fff" stroke-width="2.5"/>`;
       inner += `<text x="${bx.toFixed(1)}" y="${by+(bFont*0.32)}" text-anchor="middle" font-family="JetBrains Mono, monospace" font-weight="700" font-size="${bFont}" fill="#fff">${idx+1}</text>`;
     }
 
     cursorMM += p.length;
+    cutPoints.push({mm: cursorMM, isRef:false});
     if(kerf>0){
       const kx = cursorMM*scale;
       inner += `<line x1="${kx.toFixed(1)}" y1="0" x2="${kx.toFixed(1)}" y2="${H}" stroke="#1F2428" stroke-width="3" stroke-dasharray="7,5"/>`;
@@ -1369,7 +1394,49 @@ function buildBarSVGInner(pieces, stockLen, kerf, minOffcut, colorMap, H){
       inner += `<text x="${(rx+rw/2).toFixed(1)}" y="${H/2+fs*0.28}" text-anchor="middle" font-family="JetBrains Mono, monospace" font-weight="700" font-size="${fs.toFixed(0)}" fill="#C4432B">${Math.round(remainderMM)}</text>`;
     }
   }
-  return {inner, remainder: remainderMM, H};
+
+  // ---- Cut-mark measurement strip -----------------------------------
+  // A running total, from the left/reference end of the stock, at every
+  // cut point — so the whole bar can be marked out in one pass with a
+  // tape measure instead of re-measuring from the end of the previous
+  // piece each time. Falls back to two staggered rows only where cuts
+  // land close enough together that the numbers would otherwise collide;
+  // most bars only need the one row.
+  const dimFontSize = Math.max(11, Math.min(20, H*0.17));
+  const tickLen = Math.max(6, H*0.15);
+  const rowGap = dimFontSize + 5;
+  const row0Y = H + tickLen + dimFontSize*0.82;
+  const row1Y = row0Y + rowGap;
+  const charW = dimFontSize*0.62;
+
+  const marks = cutPoints.map(cp=>{
+    const label = Math.round(cp.mm).toString();
+    const mx = cp.mm*scale;
+    const halfW = (label.length*charW + 6)/2;
+    return {x: mx, label, halfW, isRef: cp.isRef};
+  });
+  const rowRight = [-Infinity, -Infinity];
+  let usesRow1 = false;
+  marks.forEach(m=>{
+    const row = (m.x - m.halfW) < rowRight[0] + 4 ? 1 : 0;
+    if(row===1) usesRow1 = true;
+    rowRight[row] = m.x + m.halfW;
+    m.row = row;
+  });
+
+  const totalH = (usesRow1 ? row1Y : row0Y) + 6;
+  marks.forEach(m=>{
+    const tickBottom = H + tickLen + (m.row===1 ? rowGap : 0);
+    const labelY = m.row===1 ? row1Y : row0Y;
+    const color = m.isRef ? '#8A929B' : '#E0570F';
+    let anchor='middle', tx=m.x;
+    if(m.x - m.halfW < 2){ anchor='start'; tx=2; }
+    else if(m.x + m.halfW > VB_W-2){ anchor='end'; tx=VB_W-2; }
+    inner += `<line x1="${m.x.toFixed(1)}" y1="${H}" x2="${m.x.toFixed(1)}" y2="${tickBottom.toFixed(1)}" stroke="${m.isRef?'#C7CDD1':'#1F2428'}" stroke-width="2"/>`;
+    inner += `<text x="${tx.toFixed(1)}" y="${labelY.toFixed(1)}" text-anchor="${anchor}" font-family="JetBrains Mono, monospace" font-weight="700" font-size="${dimFontSize.toFixed(0)}" fill="${color}">${m.label}</text>`;
+  });
+
+  return {inner, remainder: remainderMM, H: totalH};
 }
 
 // Groups consecutive bars that share the exact same cut pattern into single
@@ -1427,7 +1494,7 @@ const PRINT_STRUT_VB_H = 42;
 const PRINT_STREETPLATE_VB_H = 128;
 
 function buildGroupCard(g, stockLen, kerf, minOffcut, colorMap, bundleSize){
-  const {inner} = buildBarSVGInner(g.bar.pieces, stockLen, kerf, minOffcut, colorMap);
+  const {inner, H: screenH} = buildBarSVGInner(g.bar.pieces, stockLen, kerf, minOffcut, colorMap);
   const pieceList = g.bar.pieces.map(p=>p.jobLabel ? `${p.jobLabel} (${p.length}mm)` : `${p.length}mm`).join(' + ');
   const labelsInGroup = [...new Set(g.bar.pieces.map(p=>p.jobLabel).filter(Boolean))];
 
@@ -1453,17 +1520,18 @@ function buildGroupCard(g, stockLen, kerf, minOffcut, colorMap, bundleSize){
   // than reusing the tall on-screen one, which is what was leaving big
   // gaps when a card didn't quite fit at the bottom of a page.
   const printH = g.bundled ? PRINT_STRUT_VB_H : PRINT_STREETPLATE_VB_H;
-  const printSvg = svgWrap(buildBarSVGInner(g.bar.pieces, stockLen, kerf, minOffcut, colorMap, printH).inner, printH);
+  const printResult = buildBarSVGInner(g.bar.pieces, stockLen, kerf, minOffcut, colorMap, printH);
+  const printSvg = svgWrap(printResult.inner, printResult.H);
 
   const card = document.createElement('div');
   card.className = 'bar-card';
   const badgeHTML = g.count>1 ? `<div class="multiplier-badge">&times;${g.count} identical</div>` : '';
-  const bodyHTML = `<div class="cc-body no-print" style="position:relative;">${badgeHTML}${svgWrap(inner)}</div>
+  const bodyHTML = `<div class="cc-body no-print" style="position:relative;">${badgeHTML}${svgWrap(inner, screenH)}</div>
        <div class="cc-body print-svg-only" style="position:relative;">${badgeHTML}${printSvg}</div>`;
   card.innerHTML = `
     <div class="cc-head"><span>${title}</span><span>${sourceTag}</span></div>
     ${bodyHTML}
-    <div class="legend-note">${g.count>1 ? `All ${g.count} pieces are cut the same way` : 'This piece is cut'} — the numbered circle${g.bar.pieces.length!==1?'s':''} on the diagram show${g.bar.pieces.length===1?'s':''} the cut order — ${g.bar.pieces.length} cut${g.bar.pieces.length!==1?'s':''} from each ${stockLen}mm length: <b>${pieceList}</b></div>
+    <div class="legend-note">${g.count>1 ? `All ${g.count} pieces are cut the same way` : 'This piece is cut'} — the numbered circle${g.bar.pieces.length!==1?'s':''} on the diagram show${g.bar.pieces.length===1?'s':''} the cut order — ${g.bar.pieces.length} cut${g.bar.pieces.length!==1?'s':''} from each ${stockLen}mm length: <b>${pieceList}</b>. The small orange numbers below the bar are the running measurement from the left end — mark all of them off the tape in one pass, then cut.</div>
   `;
   return card;
 }
